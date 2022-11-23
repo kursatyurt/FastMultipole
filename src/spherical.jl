@@ -179,7 +179,7 @@ function B2M!(tree, elements_tuple::Tuple, i_branch)
     branch = tree.branches[i_branch]
 
     #initialize memory TODO: do this beforehand?
-    harmonics = Vector{Complex{Float64}}(undef, (tree.expansion_order+1)^2)
+    harmonics = MVector{Complex{eltype(tree)}, (tree.expansion_order+1)^2}(undef)
 
     # iterate over elements
     # for i_body in branch.first_body:branch.first_body + branch.n_bodies-1
@@ -194,7 +194,7 @@ end
 
 function M2B!(target_potential, target, i_branch, tree)
     branch = tree.branches[i_branch]
-    irregular_harmonics = Vector{Complex{Float64}}(undef, (tree.expansion_order+1)^2)
+    irregular_harmonics = MVector{Complex{eltype(tree)}, (tree.expansion_order+1)^2}(undef)
     dx = target[1:3] - branch.center
     cartesian_2_spherical!(dx)
     irregular_harmonic!(irregular_harmonics, dx..., tree.expansion_order)
@@ -253,7 +253,7 @@ function M2M!(tree, i_branch)
     branch = tree.branches[i_branch]
 
     #initialize memory TODO: do this beforehand?
-    harmonics = Vector{Complex{Float64}}(undef, (tree.expansion_order+1)^2)
+    harmonics = MVector{Complex{eltype(tree)}, (tree.expansion_order+1)^2}(undef)
 
     # iterate over children
     for i_child in branch.first_branch:branch.first_branch + branch.n_branches - 1
@@ -267,7 +267,7 @@ function M2L!(tree, i_local, j_multipole)
     multipole_branch = tree.branches[j_multipole]
 
     # preallocate
-    harmonics = Vector{Complex{Float64}}(undef, (2*tree.expansion_order + 1)^2)
+    harmonics = MVector{Complex{eltype(tree)}, (tree.expansion_order+1)^2}(undef)
 
     # get separation vector
     dx = local_branch.center - multipole_branch.center
@@ -306,7 +306,7 @@ end
 
 function B2L!(tree, i_branch, source)
     branch = tree.branches[i_branch]
-    irregular_harmonics = zeros(Complex{Float64},(tree.expansion_order+1)^2)
+    irregular_harmonics = MVector{Complex{eltype(tree)}, (tree.expansion_order+1)^2}(undef)
     dx = cartesian_2_spherical(source[1:3] - branch.center)
     irregular_harmonic!(irregular_harmonics, dx[1], dx[2], -dx[3], tree.expansion_order)
     q = source[4:7]
@@ -361,7 +361,7 @@ function L2L!(tree, j_source)
     branch = tree.branches[j_source]
 
     #initialize memory TODO: do this beforehand?
-    harmonics = Vector{Complex{Float64}}(undef, (tree.expansion_order+1)^2)
+    harmonics = MVector{Complex{eltype(tree)}, (tree.expansion_order+1)^2}(undef)
 
     # iterate over children
     for i_child in branch.first_branch:branch.first_branch + branch.n_branches - 1
@@ -373,16 +373,16 @@ end
 "Calculates the potential at all child elements of a branch."
 function L2B!(tree, elements_tuple::Tuple, i_branch)
     branch = tree.branches[i_branch]
-    harmonics = Vector{Complex{Float64}}(undef, ((tree.expansion_order+1) * (tree.expansion_order+2)) >> 1)
-    harmonics_theta = Vector{Complex{Float64}}(undef, ((tree.expansion_order+1) * (tree.expansion_order+2)) >> 1)
-    harmonics_theta_2 = Vector{Complex{Float64}}(undef, ((tree.expansion_order+1) * (tree.expansion_order+2)) >> 1)
-    workspace = zeros(3,4)
-    spherical_potential = zeros(i_POTENTIAL_HESSIAN[end])
+    harmonics = MVector{Complex{eltype(tree)}, ((tree.expansion_order+1) * (tree.expansion_order+2)) >> 1}(undef)
+    harmonics_theta = MVector{Complex{eltype(tree)}, ((tree.expansion_order+1) * (tree.expansion_order+2)) >> 1}(undef)
+    harmonics_theta_2 = MVector{Complex{eltype(tree)}, ((tree.expansion_order+1) * (tree.expansion_order+2)) >> 1}(undef)
+    workspace = @MMatrix zeros(3,4)
+    spherical_potential = @MVector zeros(i_POTENTIAL_HESSIAN[end])
     for (i_type, elements) in enumerate(elements_tuple)
         for i_body in branch.first_body[i_type]:branch.first_body[i_type] + branch.n_bodies[i_type] - 1
             body = elements.bodies[:,i_body]
             body_potential = view(elements.potential,:,i_body)
-            L2B!(body_potential, harmonics, harmonics_theta, harmonics_theta_2, workspace, spherical_potential, body, tree, branch) # fix calling syntaxs
+            L2B!(body_potential, harmonics, harmonics_theta, harmonics_theta_2, workspace, spherical_potential, body, tree, branch)
             spherical_potential .*= 0
         end
     end

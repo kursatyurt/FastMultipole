@@ -8,7 +8,8 @@ import WriteVTK
 #####
 const ONE_OVER_4PI = 1/4/pi
 const i_POSITION_vortex = fmm.i_POSITION
-const i_STRENGTH_vortex = 4:6
+const i_SIGMA_vortex = fmm.i_SIGMA
+const i_STRENGTH_vortex = 5:7
 const i_POTENTIAL_SCALAR = fmm.i_POTENTIAL[1] # 1:4
 const i_POTENTIAL_VECTOR = fmm.i_POTENTIAL[2:4]
 i_POTENTIAL_JACOBIAN = fmm.i_POTENTIAL_JACOBIAN # 5:16
@@ -98,12 +99,13 @@ end
 
 function VortexParticles(position, strength;
     N = size(position)[2],
+    sigma = zeros(1,N)
     potential = zeros(52,N),
     velocity_stretching = zeros(3+3,N),
 )
     @assert size(position)[1] == 3
     @assert size(strength)[1] == 3
-    bodies = vcat(position, strength)
+    bodies = vcat(position, sigma, strength)
     return VortexParticles(bodies; N, potential, velocity_stretching)
 end
 
@@ -113,7 +115,7 @@ function VortexParticles(bodies;
     potential = zeros(52,N),
     velocity_stretching = zeros(3+3,N),
 )
-    @assert size(bodies)[1] == 6 "bodies size first index is incorrect; got $(size(bodies)[1]); expected 6"
+    @assert size(bodies)[1] == 7 "bodies size first index is incorrect; got $(size(bodies)[1]); expected 7"
     return VortexParticles(bodies, index, potential, velocity_stretching, direct_vortex!, B2M_vortex!)
 end
 
