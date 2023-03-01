@@ -17,9 +17,10 @@ struct Tree{TF}
     branches::Vector{Branch{TF}}        # a vector of `Branch` objects composing the tree
     expansion_order::Int16
     n_per_branch::Int32    # max number of bodies in a leaf
+    index_list
 end
 
-Tree(branches, expansion_order, n_per_branch) = Tree(branches, Int16(expansion_order), Int32(n_per_branch))
+Tree(branches, expansion_order, n_per_branch, index_list) = Tree(branches, Int16(expansion_order), Int32(n_per_branch), index_list)
 
 """
     Tree(elements; expansion_order=2, n_per_branch=1)
@@ -60,7 +61,7 @@ function Tree(elements_tuple::Tuple, options::Options)
     branch!(branches, bodies_list, buffer_list, index_list, i_start, i_end, i_branch, center, radius, level, expansion_order, n_per_branch, targets_index, sources_index)
 
     # assemble tree
-    tree = Tree(branches, Int16(expansion_order), Int32(n_per_branch))
+    tree = Tree(branches, Int16(expansion_order), Int32(n_per_branch), index_list)
 
     return tree
 end
@@ -113,7 +114,7 @@ function branch!(branches, bodies_list, buffer_list, index_list, i_start, i_end,
 
         ## sort element indices into the buffer
         for i_type in 1:n_types
-            for i_body in i_start[i_type]:i_end[i_type]
+            for i_body in i_start[i_type]:i_end[i_type] # i_body is the index in the original list
                 x = bodies_list[i_type][1:3,i_body]
                 i_octant = get_octant(x, center)
                 buffer_list[i_type][:,counter[i_octant,i_type]] .= bodies_list[i_type][:,i_body]
@@ -168,6 +169,22 @@ end
 
 @inline function get_octant(x, center)
     i_octant = (UInt8((x[1] > center[1])) + UInt8(x[2] > center[2]) << 0b1 + UInt8(x[3] > center[3]) << 0b10) + 0b1
+end
+
+function resort_elements!(elements::Tuple, tree::Tree)
+    n_types = length(elements)
+
+    for i_type in 1:n_types
+        index = tree.index_list[i_type]
+        bodies = elements[i_type].bodies
+        buffer_bodies = similar(bodies)
+        buffer_bodies .= bodies[:,index]
+        bodies .= buffer_bodies
+        potential = elements[i_type].potential
+        buffer_potential = similar(potential)
+        buffer_potential .= potential[:,index]
+        potential .= buffer_potential
+    end
 end
 
 function n_terms(expansion_order, dimensions)

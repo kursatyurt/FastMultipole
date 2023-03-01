@@ -46,7 +46,7 @@ function horizontal_pass!(tree, elements, i_target, j_source, theta, targets_ind
     target_branch = branches[i_target]
     spacing = source_branch.center - target_branch.center
     spacing_squared = spacing' * spacing
-    threshold_squared = (target_branch.radius + source_branch.radius)^2 * theta # theta is the number of radii squared
+    threshold_squared = (target_branch.radius[1] + source_branch.radius[1])^2 * theta # theta is the number of radii squared
     if target_branch.is_target
         if spacing_squared >= threshold_squared # meet separation criteria
             M2L!(tree, i_target, j_source)
@@ -54,7 +54,7 @@ function horizontal_pass!(tree, elements, i_target, j_source, theta, targets_ind
         elseif source_branch.first_branch == target_branch.first_branch == -1 # both leaves
             # println("HP: P2P: $i_target $j_source")
             P2P!(tree, elements, i_target, j_source, targets_index, sources_index)
-        elseif source_branch.first_branch == -1 || (target_branch.radius >= source_branch.radius && target_branch.first_branch != -1)
+        elseif source_branch.first_branch == -1 || (target_branch.radius[1] >= source_branch.radius[1] && target_branch.first_branch != -1)
             for i_child in target_branch.first_branch:target_branch.first_branch + target_branch.n_branches - 1
                 horizontal_pass!(tree, elements, i_child, j_source, theta, targets_index, sources_index)
             end
@@ -134,21 +134,21 @@ function horizontal_pass_swapped!(tree, elements::Tuple, theta, targets_index, s
     horizontal_pass!(tree, elements, 1, 1, theta, targets_index, sources_index)
 end
 
-function horizontal_pass_swapped!(tree, elements, i_target, j_source, theta, targets_index, sources_index)
+function horizontal_pass_swapped!(tree, elements, i_target, j_source, theta, targets_index, sources_index, compute_P2P=true)
     branches = tree.branches
     source_branch = branches[j_source]
     target_branch = branches[i_target]
     spacing = source_branch.center - target_branch.center
     spacing_squared = spacing' * spacing
-    threshold_squared = (target_branch.radius + source_branch.radius)^2 * theta # theta is the number of radii squared
+    threshold_squared = (target_branch.radius[1] + source_branch.radius[1])^2 * theta # theta is the number of radii squared
     if target_branch.is_source
         if spacing_squared >= threshold_squared # meet separation criteria
             M2L!(tree, i_target, j_source)
             # println("HP: M2L: $i_target $j_source")
-        elseif source_branch.first_branch == target_branch.first_branch == -1 # both leaves
+        elseif source_branch.first_branch == target_branch.first_branch == -1 && compute_P2P # both leaves
             # println("HP: P2P: $i_target $j_source")
             P2P!(tree, elements, i_target, j_source, sources_index, targets_index)
-        elseif source_branch.first_branch == -1 || (target_branch.radius >= source_branch.radius && target_branch.first_branch != -1)
+        elseif source_branch.first_branch == -1 || (target_branch.radius[1] >= source_branch.radius[1] && target_branch.first_branch != -1)
             for i_child in target_branch.first_branch:target_branch.first_branch + target_branch.n_branches - 1
                 horizontal_pass!(tree, elements, i_child, j_source, theta, targets_index, sources_index)
             end
@@ -197,6 +197,7 @@ function fmm!(tree::Tree, elements, options::Options; reset_tree=true, swap_sour
         horizontal_pass!(tree, elements, options.theta, options.targets_index, options.sources_index)
         downward_pass!(tree, elements, options.targets_index)
     end
+    resort_elements!(elements, tree)
 end
 
 """
@@ -218,8 +219,8 @@ Note: this function merely adds to existing potential of its elements to avoid o
 
 The user must reset the potential manually.
 """
-function fmm!(elements::Tuple, options::Options)
-    tree = Tree(elements, options)
-    fmm!(tree, elements, options)
+function fmm!(elements::Tuple, options::Options; optargs...)
+    tree = Tree(elements, options) # sorts bodies
+    fmm!(tree, elements, options; optargs...)
     return tree
 end
