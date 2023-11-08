@@ -1,7 +1,6 @@
 import FLOWFMM as fmm
 using WriteVTK
 import Base: getindex, setindex!
-using StaticArrays
 const i_POSITION = 1:3
 const i_RADIUS = 4
 const i_STRENGTH = 5:8
@@ -13,9 +12,9 @@ const i_VELOCITY_GRADIENT = 8:16
 ##### gravitational kernel and mass elements
 #####
 struct Body{TF}
-    position::SVector{3,TF}
+    position::fmm.SVector{3,TF}
     radius::TF
-    strength::SVector{4,TF}
+    strength::fmm.SVector{4,TF}
 end
 
 struct Gravitational{TF}
@@ -25,7 +24,7 @@ end
 
 function Gravitational(bodies::Matrix)
     nbodies = size(bodies)[2]
-    bodies2 = [Body(SVector{3}(bodies[1:3,i]),bodies[4,i],SVector{4}(bodies[5:8,i])) for i in 1:nbodies]
+    bodies2 = [Body(fmm.SVector{3}(bodies[1:3,i]),bodies[4,i],fmm.SVector{4}(bodies[5:8,i])) for i in 1:nbodies]
     potential = zeros(52,nbodies)
     return Gravitational(bodies2,potential)
 end

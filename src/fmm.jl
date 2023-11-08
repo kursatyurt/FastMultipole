@@ -63,17 +63,64 @@ function upward_pass_single_thread!(branches, systems, expansion_order)
     end
 end
 
+function upward_pass_multi_thread!(branches, systems, levels_index, expansion_order)
+    # initialize memory
+    harmonics = zeros(eltype(branches[1].multipole_expansion), (expansion_order+1)*(expansion_order+1))
+    M = zeros(eltype(branches[1].multipole_expansion), 4)
+
+    # loop over branches
+    for branch in view(branches,length(branches):-1:2) # no need to create a multipole expansion at the very top level
+        if branch.n_branches == 0 # branch is a leaf
+            B2M!(branch, systems, harmonics, expansion_order)
+        else # not a leaf
+            # iterate over children
+            for child_branch in view(branches, branch.branch_index)
+                M2M!(branch, child_branch, harmonics, M, expansion_order)
+            end
+        end
+    end
+
+    # loop over levels
+    for level_index in view(levels_index,length(levels_index):-1:1)
+        
+        # loop over branches
+        Threads.@threads for branch in view(branches,level_index)
+            if branch.n_branches == 0 # branch is a leaf
+                B2M!(branch, systems, harmonics, expansion_order)
+            else # not a leaf
+                # iterate over children
+                for child_branch in view(branches, branch.branch_index)
+                    M2M!(branch, child_branch, harmonics, M, expansion_order)
+                end
+            end
+        end
+        
+    end
+end
+
 #####
 ##### horizontal pass
 #####
-function nearfield!(system, branches, direct_list)
+function nearfield_single_thread!(system, branches, direct_list)
     for (i_target, j_source) in direct_list
         P2P!(system, branches[i_target], branches[j_source])
     end
 end
 
-function nearfield!(target_system, target_branches, source_system, source_branches, direct_list)
+function nearfield_single_thread!(target_system, target_branches, source_system, source_branches, direct_list)
     for (i_target, j_source) in direct_list
+        P2P!(target_system, target_branches[i_target], source_system, source_branches[j_source])
+    end
+end
+
+function nearfield_multi_thread!(system, branches, direct_list)
+    Threads.@threads for (i_target, j_source) in direct_list
+        P2P!(system, branches[i_target], branches[j_source])
+    end
+end
+
+function nearfield_multi_thread!(target_system, target_branches, source_system, source_branches, direct_list)
+    Threads.@threads for (i_target, j_source) in direct_list
         P2P!(target_system, target_branches[i_target], source_system, source_branches[j_source])
     end
 end
@@ -207,21 +254,39 @@ function fmm!(tree::Tree, systems; theta=0.4, reset_tree=true, nearfield=true, f
     # println("interaction list")
     # @time m2l_list, direct_list = build_interaction_lists(tree.branches, theta, farfield, nearfield)
     m2l_list, direct_list = build_interaction_lists(tree.branches, theta, farfield, nearfield)
+    println(tree.levels_index)
     
     # run FMM
-    # println("nearfield")
-    # @time nearfield && (nearfield!(systems, tree.branches, direct_list))
-    nearfield && (nearfield!(systems, tree.branches, direct_list))
-    if farfield
-        # println("upward pass")
-        upward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
-        # @time upward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
-        # println("horizontal pass")
-        # @time horizontal_pass!(tree.branches, m2l_list, tree.expansion_order)
-        horizontal_pass_single_thread!(tree.branches, m2l_list, tree.expansion_order)
-        # println("downward pass")
-        downward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
-        # @time downward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
+    if Threads.nthreads() > 1
+        # println("nearfield")
+        # @time nearfield && (nearfield_multi_thread!(systems, tree.branches, direct_list))
+        nearfield && (nearfield_multi_thread!(systems, tree.branches, direct_list))
+        if farfield
+            # println("upward pass")
+            upward_pass_multi_thread!(tree.branches, systems, tree.expansion_order)
+            # @time upward_pass_multi_thread!(tree.branches, systems, tree.expansion_order)
+            # println("horizontal pass")
+            # @time horizontal_pass!(tree.branches, m2l_list, tree.expansion_order)
+            horizontal_pass_multi_thread!(tree.branches, m2l_list, tree.expansion_order)
+            # println("downward pass")
+            downward_pass_multi_thread!(tree.branches, systems, tree.expansion_order)
+            # @time downward_pass_multi_thread!(tree.branches, systems, tree.expansion_order)
+        end
+    else
+        # println("nearfield")
+        # @time nearfield && (nearfield_single_thread!(systems, tree.branches, direct_list))
+        nearfield && (nearfield_single_thread!(systems, tree.branches, direct_list))
+        if farfield
+            # println("upward pass")
+            upward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
+            # @time upward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
+            # println("horizontal pass")
+            # @time horizontal_pass!(tree.branches, m2l_list, tree.expansion_order)
+            horizontal_pass_single_thread!(tree.branches, m2l_list, tree.expansion_order)
+            # println("downward pass")
+            downward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
+            # @time downward_pass_single_thread!(tree.branches, systems, tree.expansion_order)
+        end
     end
     
     # unsort bodies

@@ -9,7 +9,7 @@ import Statistics
 S = Statistics
 import Symbolics
 sym = Symbolics
-using StaticArrays, Random, LegendrePolynomials
+using Random, LegendrePolynomials
 
 import FLOWFMM
 fmm = FLOWFMM
@@ -973,11 +973,11 @@ vortexparticles.velocity_stretching .*= 0
 expansion_order = 9
 n_per_branch = 1
 x_branch_1 = fmm.SVector{3}([0.0,0,0])
-branch_1 = fmm.MultiBranch(SVector{1}([1:2]), 2, 2:3, x_branch_1, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
+branch_1 = fmm.MultiBranch(fmm.SVector{1}([1:2]), 2, 2:3, x_branch_1, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
 x_branch_2 = fmm.SVector{3}(xs[:,1] .+ [0.01, 0.02, -0.03])
-branch_2 = fmm.MultiBranch(SVector{1}([1:1]), 0, 3:2, x_branch_2, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
+branch_2 = fmm.MultiBranch(fmm.SVector{1}([1:1]), 0, 3:2, x_branch_2, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
 x_branch_3 = fmm.SVector{3}(xs[:,2] .+ [0.02, -0.04, 0.01])
-branch_3 = fmm.MultiBranch(SVector{1}([2:2]), 0, 3:2, x_branch_3, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
+branch_3 = fmm.MultiBranch(fmm.SVector{1}([2:2]), 0, 3:2, x_branch_3, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
 
 # using FMM
 # tree = fmm.Tree(branches, [expansion_order], n_per_branch, B2M!, P2P!)
@@ -1144,12 +1144,12 @@ vortex_particles.velocity_stretching .*= 0
 # branch = Branch(n_branches, n_bodies, i_child, i_start, center, radius, multipole_expansion, local_expansion)
 expansion_order = 9
 n_per_branch = 1
-x_branch_1 = SVector{3}((bodies[1:3,1] + bodies[1:3,2])/2)
-branch_1 = fmm.MultiBranch(SVector{1}([1:2]), 2, 2:3, x_branch_1, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
-x_branch_2 = SVector{3}(bodies[1:3,1] .+ [0.01, 0.02, -0.03])
-branch_2 = fmm.MultiBranch(SVector{1}([1:1]), 0, 3:2, x_branch_2, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
-x_branch_3 = SVector{3}(bodies[1:3,2] .+ [0.02, -0.04, 0.01])
-branch_3 = fmm.MultiBranch(SVector{1}([2:2]), 0, 3:2, x_branch_2, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
+x_branch_1 = fmm.SVector{3}((bodies[1:3,1] + bodies[1:3,2])/2)
+branch_1 = fmm.MultiBranch(fmm.SVector{1}([1:2]), 2, 2:3, x_branch_1, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
+x_branch_2 = fmm.SVector{3}(bodies[1:3,1] .+ [0.01, 0.02, -0.03])
+branch_2 = fmm.MultiBranch(fmm.SVector{1}([1:1]), 0, 3:2, x_branch_2, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
+x_branch_3 = fmm.SVector{3}(bodies[1:3,2] .+ [0.02, -0.04, 0.01])
+branch_3 = fmm.MultiBranch(fmm.SVector{1}([2:2]), 0, 3:2, x_branch_2, 1/8, fmm.initialize_expansion(expansion_order), fmm.initialize_expansion(expansion_order), ReentrantLock())
 
 dummy_index = (zeros(Int,length(vortex_particles.bodies)),)
 tree = fmm.MultiTree([branch_1, branch_2, branch_3], [1:1,2:3], dummy_index, dummy_index, (deepcopy(vortex_particles),), expansion_order, n_per_branch)
