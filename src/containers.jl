@@ -126,6 +126,7 @@ struct MultiBranch{TF,N} <: Branch
     bodies_index::SVector{N,UnitRange{Int64}}
     n_branches::Int64
     branch_index::UnitRange{Int64}
+    i_parent::Int64
     center::SVector{3,TF}   # center of the branch
     radius::TF              # side lengths of the cube encapsulating the branch
     multipole_expansion::Array{Complex{TF},2} # multipole expansion coefficients
@@ -141,6 +142,7 @@ struct SingleBranch{TF} <: Branch
     bodies_index::UnitRange{Int64}
     n_branches::Int64
     branch_index::UnitRange{Int64}
+    i_parent::Int64
     center::SVector{3,TF}   # center of the branch
     radius::TF              # side lengths of the cube encapsulating the branch
     multipole_expansion::Array{Complex{TF},2} # multipole expansion coefficients

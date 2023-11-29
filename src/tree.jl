@@ -123,7 +123,7 @@ end
 
 function child_branches!(branches, system, sort_index, buffer, sort_index_buffer, n_per_branch, parents_index, cumulative_octant_census, octant_container, n_children, expansion_order)
     i_first_branch = parents_index[end] + n_children + 1
-    for parent_branch in view(branches, parents_index)
+    for (parent_index,parent_branch) in zip(parents_index,view(branches, parents_index))
         if parent_branch.n_branches > 0
             # radius of the child branches
             child_radius = parent_branch.radius / 2.0
@@ -138,7 +138,7 @@ function child_branches!(branches, system, sort_index, buffer, sort_index_buffer
                     if get_population(cumulative_octant_census, i_octant) > 0  
                         bodies_index = get_bodies_index(cumulative_octant_census, parent_branch.bodies_index, i_octant)
                         child_center = get_child_center(parent_branch.center, parent_branch.radius, i_octant)
-                        child_branch, n_grandchildren = Branch(system, sort_index, octant_container, buffer, sort_index_buffer, i_first_branch, bodies_index, child_center, child_radius, n_per_branch, expansion_order)
+                        child_branch, n_grandchildren = Branch(system, sort_index, octant_container, buffer, sort_index_buffer, i_parent, i_first_branch, bodies_index, child_center, child_radius, n_per_branch, expansion_order)
                         i_first_branch += n_grandchildren
                         push!(branches, child_branch)
                     end
@@ -151,7 +151,7 @@ function child_branches!(branches, system, sort_index, buffer, sort_index_buffer
     return parents_index, n_children
 end
 
-function Branch(system, sort_index, octant_container, buffer, sort_index_buffer, i_first_branch, bodies_index, center, radius, n_per_branch, expansion_order)
+function Branch(system, sort_index, octant_container, buffer, sort_index_buffer, i_parent, i_first_branch, bodies_index, center, radius, n_per_branch, expansion_order)
     # count bodies in each octant
     census!(octant_container, system, bodies_index, center)
     
@@ -173,15 +173,15 @@ function Branch(system, sort_index, octant_container, buffer, sort_index_buffer,
     branch_index = i_first_branch : i_first_branch + n_children - 1
     n_branches = length(branch_index)
 
-    return Branch(bodies_index, n_branches, branch_index, center, radius, expansion_order), n_children
+    return Branch(bodies_index, n_branches, branch_index, i_parent, center, radius, expansion_order), n_children
 end
 
-function Branch(bodies_index::UnitRange, n_branches, branch_index, center, radius, expansion_order)
-    return SingleBranch(bodies_index, n_branches, branch_index, center, radius, initialize_expansion(expansion_order, typeof(radius)), initialize_expansion(expansion_order, typeof(radius)), initialize_harmonics(expansion_order, typeof(radius)), initialize_ML(expansion_order, typeof(radius)), ReentrantLock())
+function Branch(bodies_index::UnitRange, n_branches, branch_index, i_parent, center, radius, expansion_order)
+    return SingleBranch(bodies_index, n_branches, branch_index, i_parent, center, radius, initialize_expansion(expansion_order, typeof(radius)), initialize_expansion(expansion_order, typeof(radius)), initialize_harmonics(expansion_order, typeof(radius)), initialize_ML(expansion_order, typeof(radius)), ReentrantLock())
 end
 
-function Branch(bodies_index, n_branches, branch_index, center, radius, expansion_order)
-    return MultiBranch(bodies_index, n_branches, branch_index, center, radius, initialize_expansion(expansion_order, typeof(radius)), initialize_expansion(expansion_order, typeof(radius)), initialize_harmonics(expansion_order, typeof(radius)), initialize_ML(expansion_order, typeof(radius)), ReentrantLock())
+function Branch(bodies_index, n_branches, branch_index, i_parent, center, radius, expansion_order)
+    return MultiBranch(bodies_index, n_branches, branch_index, i_parent, center, radius, initialize_expansion(expansion_order, typeof(radius)), initialize_expansion(expansion_order, typeof(radius)), initialize_harmonics(expansion_order, typeof(radius)), initialize_ML(expansion_order, typeof(radius)), ReentrantLock())
 end
 
 @inline get_body_positions(system, bodies_index::UnitRange) = (system[i,POSITION] for i in bodies_index)
